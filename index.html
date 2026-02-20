@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI Terminal</title>
+
+<!-- disclaimer: nie robię tego z Reactem i osobnymi komponentami bo nie ma sensu 
+ i mam tylko 2 dni xd ale missing typescript already -->
+
+
+<style> /* jebanie z html i cssami */
+body, html {
+    margin: 0;
+    padding: 0;
+    background: black;
+    font-family: 'Courier New', monospace;
+    color: #00ff88;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+}
+
+.terminal {
+    width: 95vw;          /* no i nagle zaczął działac na mobilce */
+    max-width: 600px;      /* desktop */
+    padding: 20px;         /* mniejszy padding na mobilce */
+    background: #000;
+    border: 2px solid #00ff88;
+    box-shadow: 0 0 25px #00ff8830;
+    font-size: 18px;
+    display: flex; /* flexbox, a jak */
+    flex-direction: column;
+    align-items: flex-start;
+    overflow-y: auto;
+}
+
+.line {
+    white-space: pre-wrap;
+}
+
+#cursor {
+    display: inline-block;
+    width: 12px;
+    height: 22px;
+    background: #00ff88;
+    animation: blink 1s infinite; /* blink blink */
+    vertical-align: bottom;
+    margin-left: 2px;
+}
+
+@keyframes blink {
+    0%,50% {opacity: 1;}
+    51%,100% {opacity: 0;}
+}
+
+/* może się już nie rozjedzie... stack overflow poratował
+as usual */
+@media (max-width: 600px) {
+    .terminal {
+        font-size: 16px;
+        padding: 15px;
+    }
+    #cursor {
+        height: 18px;
+    }
+}
+</style>
+</head>
+
+<body>
+
+<div class="terminal" id="terminalDiv"></div>
+
+<script>
+const terminal = document.getElementById("terminalDiv");
+
+// zadaneczko
+const messages = [
+"> Initializing Legendary Behavioral Model...",
+"> Dataset: documented Barney Stinson interactions",
+"> Authentication required.",
+"> Features:", 
+"  x1 = Wearing a suit (1 = yes, 0 = no)",
+"  x2 = Using a play from the Playbook (1 = yes, 0 = no)",
+"  x3 = Says 'legendary' (1 = yes, 0 = no)",
+"  x4 = Confidence level (integer 0–20)",
+
+"> Decision function:",
+"  f(x) = 3*x1 + 2*x2 + x3 + x4",
+
+"> Constraint:",
+"  If x4 = 20, then x1 must be 1",
+
+"> Scenario:",
+"  - Barney is wearing a suit.",
+"  - He uses a play.",
+"  - He does NOT say 'legendary'.",
+"  - His confidence level is maximal.",
+
+"> Determine the output class:",
+"  If f(x) = 22 → LEGENDARY",
+"  Otherwise → NOT LEGENDARY"
+];
+
+let msgIndex = 0;
+
+// child kursorek + linie
+let currentLine = document.createElement("div");
+currentLine.className = "line";
+terminal.appendChild(currentLine);
+
+const cursor = document.createElement("span");
+cursor.id = "cursor";
+currentLine.appendChild(cursor);
+
+let userInput = "";
+
+// typing liter, działa jako tako ale już ciul bo za dużo jebania żeby jeszcze ustawiać to 
+function typeNextMessage(){
+    if(msgIndex < messages.length){
+        const msg = messages[msgIndex];
+        let i = 0;
+
+        function typeChar(){
+            if(i < msg.length){
+                const span = document.createElement("span");
+                span.textContent = msg[i];
+                currentLine.insertBefore(span, cursor);
+                i++;
+                terminal.scrollTop = terminal.scrollHeight;
+                setTimeout(typeChar, 50); // timeout do literek
+            } else {
+                // new lineee
+                currentLine = document.createElement("div");
+                currentLine.className = "line";
+                terminal.appendChild(currentLine);
+                currentLine.appendChild(cursor);
+                msgIndex++;
+                setTimeout(typeNextMessage, 200); // nigdy nie wiem jak te czasy dobrze ustawić
+            }
+        }
+
+        typeChar();
+    }
+}
+
+typeNextMessage();
+
+// odpowiedź na zadanko
+document.addEventListener("keydown", e => {
+    if(msgIndex < messages.length) return; // a tu coś źle mi działa ale nie wiem co xd
+
+    if(e.key.length === 1){ 
+        const span = document.createElement("span");
+        span.textContent = e.key;
+        currentLine.insertBefore(span, cursor);
+        userInput += e.key;
+        terminal.scrollTop = terminal.scrollHeight;
+    } else if(e.key === "Backspace"){
+        if(userInput.length > 0){
+            userInput = userInput.slice(0,-1);
+            currentLine.removeChild(currentLine.children[currentLine.children.length-2]); 
+        }
+    } else if(e.key === "Enter"){
+        currentLine.innerHTML = "> " + userInput;
+        currentLine.appendChild(cursor);
+
+        if(userInput.trim().toLowerCase() === "legendary".toLowerCase()){ // odp
+            typeMessage("> Access granted.", "#00ff88", ()=>{
+                setTimeout(()=>{ window.location.href="zaproszenie.html"; }, 500);
+            });
+        } else {
+            typeMessage("> Access denied. Try again.", "#ff4444", ()=>{
+                currentLine = document.createElement("div");
+                currentLine.className = "line";
+                terminal.appendChild(currentLine);
+                currentLine.appendChild(cursor);
+                userInput = "";
+            });
+        }
+
+        userInput = "";
+    }
+});
+
+// funkcja literka po literce (Access granted/denied)
+function typeMessage(text, color="#00ff88", callback=null){
+    currentLine = document.createElement("div");
+    currentLine.className = "line";
+    terminal.appendChild(currentLine);
+    currentLine.appendChild(cursor);
+
+    let i = 0;
+    function step(){
+        if(i < text.length){
+            const span = document.createElement("span");
+            span.textContent = text[i];
+            span.style.color = color;
+            currentLine.insertBefore(span, cursor);
+            i++;
+            terminal.scrollTop = terminal.scrollHeight; // nie wiem czy to działa nawet XD nvm
+            setTimeout(step, 50);
+        } else {
+            currentLine = document.createElement("div");
+            currentLine.className = "line";
+            terminal.appendChild(currentLine);
+            currentLine.appendChild(cursor);
+            if(callback) callback();
+        }
+    }
+    step();
+}
+</script>
+
+</body>
+</html>
